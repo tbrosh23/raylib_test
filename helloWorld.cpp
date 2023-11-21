@@ -56,8 +56,8 @@ int main(void)
     float defaultHeight = 118;
     float defaultWidth = 42;
 
-    float defaultXPos   = 400;
-    float defaultYPos   = 0;
+    float defaultXPos   = 190;
+    float defaultYPos   = 200;
     Rectangle player    = { defaultXPos, defaultYPos, defaultWidth, defaultHeight };
 
     int runningOffset = defaultWidth/4;
@@ -65,7 +65,9 @@ int main(void)
     Rectangle buildings[MAX_BUILDINGS] = { 0 };
     Color buildColors[MAX_BUILDINGS] = { 0 };
 
-    Vector2 acceleration = {0, 0.2};
+    Vector2 acceleration = {0, 0.3};
+    PosVel playerPosVelLastFrame;
+    int collisionStatus;
     PosVel playerPosVel;
 
     std::vector<Rectangle>* collisionBoxes = new std::vector<Rectangle>;
@@ -104,15 +106,24 @@ int main(void)
 
     Rectangle floorCollisionBox = {-6000, 320, 13000, 8000};
     collisionBoxes->push_back(floorCollisionBox);
+    Rectangle wallLeftCollisionBox = {-400, -1000, 100, 1800};
+    collisionBoxes->push_back(wallLeftCollisionBox);
+    Rectangle wallRightCollisionBox = {800, -1000, 100, 1800};
+    collisionBoxes->push_back(wallRightCollisionBox);
 
-    Rectangle ledge1CollisionBox = {-400, 50, (float)mossyTile.width, (float)mossyTile.height};
+    Rectangle ledge1CollisionBox = {-100, 50, (float)mossyTile.width, (float)mossyTile.height};
     collisionBoxes->push_back(ledge1CollisionBox);
+    Rectangle ledge2CollisionBox = {200, 0, (float)mossyTile.width, (float)mossyTile.height};
+    collisionBoxes->push_back(ledge2CollisionBox);
+    Rectangle ledge3CollisionBox = {-300, -800, (float)mossyTile.width, (float)mossyTile.height};
+    collisionBoxes->push_back(ledge3CollisionBox);
 
     Camera2D camera = { 0 };
-    camera.target = { static_cast<float>(player.x + 20.0f), static_cast<float>(player.y + 20.0f )};
+    camera.target = { static_cast<float>(player.x + 20.0f), static_cast<float>(player.y + 20.0f - 200.0f )};
     camera.offset = { static_cast<float>(screenWidth/2.0f), static_cast<float>(screenHeight/2.0f)};
     camera.rotation = 0.0f;
-    camera.zoom = 1.0f;
+    camera.zoom = 0.55f;
+
 
     SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
@@ -143,11 +154,11 @@ int main(void)
             if(spacePressedDuration != 0){
                 playerPosVel.Vel.y -= computeJumpStrength(spacePressedDuration);
                 if (IsKeyDown(KEY_RIGHT)) {
-                    playerPosVel.Vel.x = 10;
+                    playerPosVel.Vel.x = JUMP_SPEED;
                     directionFacing = 1;
                 }
                 else if (IsKeyDown(KEY_LEFT)) {
-                    playerPosVel.Vel.x = -10;
+                    playerPosVel.Vel.x = -JUMP_SPEED;
                     directionFacing = 0;
                 }
 
@@ -161,7 +172,7 @@ int main(void)
                 isMovingLeft = false;
                 isMovingRight = true;
                 directionFacing = isMovingRight;
-                playerPosVel.Vel.x = 5;
+                playerPosVel.Vel.x = 4;
                 //player.x += 5;
             }
             else if (IsKeyDown(KEY_LEFT) && !isAirborne && !IsKeyDown(KEY_SPACE)) {
@@ -169,7 +180,7 @@ int main(void)
                 isMovingLeft = true;
                 isMovingRight = false;
                 directionFacing = isMovingRight;
-                playerPosVel.Vel.x = -5;
+                playerPosVel.Vel.x = -4;
             }
             else {
                 isIdle = true;
@@ -194,7 +205,22 @@ int main(void)
         player.x = playerPosVel.Pos.x;
         player.y = playerPosVel.Pos.y;
 
-        isAirborne  = checkAllCollisionBoxes(collisionBoxes, player, &playerPosVel) ? false : true;
+        collisionStatus  = checkAllCollisionBoxes(collisionBoxes, player, &playerPosVel);
+        //printf("collision status: %d\n", collisionStatus);
+        if(collisionStatus == 0) {
+            isAirborne = true;
+        }
+        else if(collisionStatus == 2 && isAirborne == false) {
+            //printf("in loop");
+            playerPosVel.Pos = playerPosVelLastFrame.Pos;
+            isIdle = true;
+            isMovingLeft  = false;
+            isMovingRight = false;
+            //isAirborne = false;
+        }
+        else if(collisionStatus == 1) {
+            isAirborne = false;
+        }
 
         // apply Dyanmics
         player.x = playerPosVel.Pos.x;
@@ -204,7 +230,7 @@ int main(void)
         
 
         // Camera target follows player
-        camera.target = {static_cast<float>(player.x + 20), static_cast<float>(player.y + 20) };
+        //camera.target = {static_cast<float>(player.x + 20), static_cast<float>(player.y + 20) };
 
         // Camera rotation controls
         if (IsKeyDown(KEY_A)) camera.rotation--;
@@ -227,6 +253,9 @@ int main(void)
             camera.rotation = 0.0f;
         }
         //----------------------------------------------------------------------------------
+
+        printf("Player lcoation: %f, \t %f\n", playerPosVel.Pos.x, playerPosVel.Pos.y);
+        //printf("camera.zoom = %f", camera.zoom);
 
         // Texture location update
         framesCounter++;
@@ -282,6 +311,8 @@ int main(void)
             }
         }
 
+        playerPosVelLastFrame = playerPosVel;
+
         // Draw
         //----------------------------------------------------------------------------------
         BeginDrawing();
@@ -290,19 +321,26 @@ int main(void)
 
             BeginMode2D(camera);
 
-                DrawRectangleRec(floorCollisionBox, DARKGRAY);
+                //DrawRectangleRec(floorCollisionBox, DARKGRAY);
+                
                 
                 for (int i = 0; i < MAX_BUILDINGS; i++) DrawRectangleRec(buildings[i], buildColors[i]);
 
-                DrawRectangleRec(ledge1CollisionBox, DARKBLUE);
+                for (int i = 0; i < collisionBoxes->size(); i++) DrawRectangleRec((*collisionBoxes)[i], DARKGRAY);
+                
+
+                //DrawRectangleRec(ledge1CollisionBox, DARKBLUE);
 
                 //DrawRectangleRec(player, RED);
 
-                DrawLine((int)camera.target.x, -screenHeight*10, (int)camera.target.x, screenHeight*10, GREEN);
-                DrawLine(-screenWidth*10, (int)camera.target.y, screenWidth*10, (int)camera.target.y, GREEN);
+                //DrawLine((int)camera.target.x, -screenHeight*10, (int)camera.target.x, screenHeight*10, GREEN);
+                //DrawLine(-screenWidth*10, (int)camera.target.y, screenWidth*10, (int)camera.target.y, GREEN);
 
                 DrawTextureRec(curScarfy, frameRec, texturePos, WHITE);  // Draw part of the texture
                 DrawTextureRec(mossyTile, mossyTileFrameRec,{ledge1CollisionBox.x, ledge1CollisionBox.y}, WHITE );
+                DrawTextureRec(mossyTile, mossyTileFrameRec,{ledge2CollisionBox.x, ledge2CollisionBox.y}, WHITE );
+                DrawTextureRec(mossyTile, mossyTileFrameRec,{ledge3CollisionBox.x, ledge3CollisionBox.y}, WHITE );
+                
 
 
             EndMode2D();

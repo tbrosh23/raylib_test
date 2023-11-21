@@ -2,12 +2,13 @@
 #include "raylib.h"
 #include "dynamicsFunction.h"
 
-#define ACCEL_2ORDER -0.002f
-#define ACCEL_1ORDER 0.4f
-#define ACCEL_0ORDER 0.06f
+#define ACCEL_2ORDER -0.001f
+#define ACCEL_1ORDER 0.3f
+#define ACCEL_0ORDER 0.04f
+
 
 float computeJumpStrength(int time) {
-    time = time > 100 ? 100 : time;
+    time = time > 80 ? 80 : time;
     return ACCEL_2ORDER * time*time + ACCEL_1ORDER * time + ACCEL_0ORDER;
 }
 
@@ -24,9 +25,9 @@ PosVel applyAcceleration(PosVel curPosVel, Vector2 acceleration ) {
 }
 
 
-bool checkAllCollisionBoxes(std::vector<Rectangle>* collisionBoxes, Rectangle player, PosVel* curPosVel) {
+int checkAllCollisionBoxes(std::vector<Rectangle>* collisionBoxes, Rectangle player, PosVel* curPosVel) {
     Rectangle collisionRectangle;
-    bool upperCollision = false;
+    int collisionStatus = 0;
     for(int i = 0; i < collisionBoxes->size(); i++) {
         if(CheckCollisionRecs(player, (*collisionBoxes)[i])) {
             collisionRectangle = GetCollisionRec(player, (*collisionBoxes)[i]);
@@ -35,7 +36,7 @@ bool checkAllCollisionBoxes(std::vector<Rectangle>* collisionBoxes, Rectangle pl
                 // Check if the collision is top or bottom
                 if(collisionRectangle.y == (*collisionBoxes)[i].y) { //upper
                     curPosVel->Pos.y = curPosVel->Pos.y - collisionRectangle.height;
-                    upperCollision = true;
+                    collisionStatus = 1;
                 }
                 else curPosVel->Pos.y = curPosVel->Pos.y + collisionRectangle.height;
                 // Reset the Velocity
@@ -50,11 +51,9 @@ bool checkAllCollisionBoxes(std::vector<Rectangle>* collisionBoxes, Rectangle pl
                 
                 // Bounce off the wall at 1/5 speed
                 curPosVel->Vel.x = -curPosVel->Vel.x/5;
+                collisionStatus = 2;
             }
-
-
-            break;
         }
     }
-    return upperCollision;
+    return collisionStatus;
 }
