@@ -18,15 +18,15 @@ int main(void)
     srand(time(NULL));
     int track = rand() % 2;
 
-    const int screenWidth = 800;
-    const int screenHeight = 450;
+    //const int screenWidth = 800;
+    //const int screenHeight = 450;
 
     int currentFrame = 0;
 
     int framesCounter = 0;
     int framesSpeed = 8;
 
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - 2d camera");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "raylib [core] example - 2d camera");
 
     InitAudioDevice();              // Initialize audio device
 
@@ -94,7 +94,7 @@ int main(void)
     {
         buildings[i].width = (float)GetRandomValue(50, 200);
         buildings[i].height = (float)GetRandomValue(100, 800);
-        buildings[i].y = screenHeight - 130.0f - buildings[i].height;
+        buildings[i].y = SCREEN_HEIGHT - 130.0f - buildings[i].height;
         buildings[i].x = -6000.0f + spacing;
 
         spacing += (int)buildings[i].width;
@@ -118,11 +118,29 @@ int main(void)
     Rectangle ledge3CollisionBox = {-300, -800, (float)mossyTile.width, (float)mossyTile.height};
     collisionBoxes->push_back(ledge3CollisionBox);
 
+    
+    
     Camera2D camera = { 0 };
     camera.target = { static_cast<float>(player.x + 20.0f), static_cast<float>(player.y + 20.0f - 200.0f )};
-    camera.offset = { static_cast<float>(screenWidth/2.0f), static_cast<float>(screenHeight/2.0f)};
+    camera.offset = { static_cast<float>(SCREEN_WIDTH/2.0f), static_cast<float>(SCREEN_HEIGHT/2.0f)};
     camera.rotation = 0.0f;
     camera.zoom = 0.55f;
+
+    std::vector<Panel>* worldPanels = new std::vector<Panel>;
+    Panel Panel1;
+    Panel1.collisionBoxes = collisionBoxes;
+    Panel1.camera         = camera;
+
+    worldPanels->push_back(Panel1);
+
+    // Initialize curPanel to the first panel
+    int curPanelIndex = 0;
+    Panel curPanel = (*worldPanels)[curPanelIndex];
+    std::vector<Rectangle>* curCollisionBoxes;
+    // Load the initial collision boxes
+    curCollisionBoxes->swap(*(*worldPanels)[curPanelIndex].collisionBoxes);
+
+    int cameraBoundsStatus = 0;
 
 
     SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
@@ -134,6 +152,29 @@ int main(void)
         // Update
         UpdateMusicStream(music);   // Update music buffer with new stream data
         //----------------------------------------------------------------------------------
+
+        cameraBoundsStatus = checkCameraBounds(curPanel, playerPosVel.Pos);
+        if(cameraBoundsStatus != eNoCHANGE) {
+            // store the current collision box
+            curCollisionBoxes->swap(*(*worldPanels)[curPanelIndex].collisionBoxes);
+            if(cameraBoundsStatus == eUPPER) {
+                // Load the next panel if it exists
+                if(worldPanels->size() > (curPanelIndex - 1)) {
+                    curPanelIndex ++;
+                    curPanel = (*worldPanels)[curPanelIndex];
+                }
+            }
+            else if (cameraBoundsStatus == eLOWER)
+            {
+                // Load the last panel if it exists
+                if(curPanelIndex > 0) {
+                    curPanelIndex --;
+                    curPanel = (*worldPanels)[curPanelIndex];
+                }          
+            }
+            // Load the new collision Boxes
+            curCollisionBoxes->swap(*(*worldPanels)[curPanelIndex].collisionBoxes);
+        }
         
         // Player movement
 
@@ -205,7 +246,7 @@ int main(void)
         player.x = playerPosVel.Pos.x;
         player.y = playerPosVel.Pos.y;
 
-        collisionStatus  = checkAllCollisionBoxes(collisionBoxes, player, &playerPosVel);
+        collisionStatus  = checkAllCollisionBoxes(curCollisionBoxes, player, &playerPosVel);
         //printf("collision status: %d\n", collisionStatus);
         if(collisionStatus == 0) {
             isAirborne = true;
@@ -254,7 +295,7 @@ int main(void)
         }
         //----------------------------------------------------------------------------------
 
-        printf("Player lcoation: %f, \t %f\n", playerPosVel.Pos.x, playerPosVel.Pos.y);
+        //printf("Player lcoation: %f, \t %f\n", playerPosVel.Pos.x, playerPosVel.Pos.y);
         //printf("camera.zoom = %f", camera.zoom);
 
         // Texture location update
@@ -326,7 +367,7 @@ int main(void)
                 
                 for (int i = 0; i < MAX_BUILDINGS; i++) DrawRectangleRec(buildings[i], buildColors[i]);
 
-                for (int i = 0; i < collisionBoxes->size(); i++) DrawRectangleRec((*collisionBoxes)[i], DARKGRAY);
+                for (int i = 0; i < curCollisionBoxes->size(); i++) DrawRectangleRec((*curCollisionBoxes)[i], DARKGRAY);
                 
 
                 //DrawRectangleRec(ledge1CollisionBox, DARKBLUE);
@@ -347,10 +388,10 @@ int main(void)
 
             DrawText("SCREEN AREA", 640, 10, 20, RED);
 
-            DrawRectangle(0, 0, screenWidth, 5, RED);
-            DrawRectangle(0, 5, 5, screenHeight - 10, RED);
-            DrawRectangle(screenWidth - 5, 5, 5, screenHeight - 10, RED);
-            DrawRectangle(0, screenHeight - 5, screenWidth, 5, RED);
+            DrawRectangle(0, 0, SCREEN_WIDTH, 5, RED);
+            DrawRectangle(0, 5, 5, SCREEN_HEIGHT - 10, RED);
+            DrawRectangle(SCREEN_WIDTH - 5, 5, 5, SCREEN_HEIGHT - 10, RED);
+            DrawRectangle(0, SCREEN_HEIGHT - 5, SCREEN_WIDTH, 5, RED);
 
             DrawRectangle( 10, 10, 250, 113, Fade(SKYBLUE, 0.5f));
             DrawRectangleLines( 10, 10, 250, 113, BLUE);

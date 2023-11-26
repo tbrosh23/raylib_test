@@ -57,3 +57,24 @@ int checkAllCollisionBoxes(std::vector<Rectangle>* collisionBoxes, Rectangle pla
     }
     return collisionStatus;
 }
+
+int checkCameraBounds(Panel curPanel, Vector2 playerPos) {
+    int retVal = eNoCHANGE;
+    if(playerPos.y > (curPanel.camera.offset.y + SCREEN_HEIGHT / 2)){
+        retVal = eLOWER;
+    }
+    else if (playerPos.y < (curPanel.camera.offset.y - SCREEN_HEIGHT / 2))
+    {
+        retVal = eUPPER;
+    }
+    else if (playerPos.x < (curPanel.camera.offset.x - SCREEN_WIDTH / 2))
+    {
+        retVal = eLEFT;
+    }
+    else if (playerPos.x > (curPanel.camera.offset.x + SCREEN_WIDTH / 2))
+    {
+        retVal = eRIGHT;
+    }
+
+    return retVal;    
+}
