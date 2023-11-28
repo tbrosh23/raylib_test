@@ -35,4 +35,8 @@ PosVel applyAcceleration(PosVel curPosVel, Vector2 acceleration );
 // 0 all other times
 int checkAllCollisionBoxes(std::vector<Rectangle>* collisionBoxes, Rectangle player, PosVel* curPosVel);
 
+// @\briefChecks the player against the current panel's camera bounds.
+// Returns:
+// 0 if the player is still within the current panel camera bounds (cameraStat eNOCHANGE)
+// corresponding cameraStat if player is outside current panel camera bounds
 int checkCameraBounds(Panel curPanel, Vector2 playerPos);

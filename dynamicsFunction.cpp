@@ -50,7 +50,7 @@ int checkAllCollisionBoxes(std::vector<Rectangle>* collisionBoxes, Rectangle pla
                     curPosVel->Pos.x = curPosVel->Pos.x + collisionRectangle.width;
                 
                 // Bounce off the wall at 1/5 speed
-                curPosVel->Vel.x = -curPosVel->Vel.x/5;
+                curPosVel->Vel.x = -curPosVel->Vel.x/4;
                 collisionStatus = 2;
             }
         }
@@ -60,10 +60,10 @@ int checkAllCollisionBoxes(std::vector<Rectangle>* collisionBoxes, Rectangle pla
 
 int checkCameraBounds(Panel curPanel, Vector2 playerPos) {
     int retVal = eNoCHANGE;
-    if(playerPos.y > (curPanel.camera.offset.y + SCREEN_HEIGHT / 2)){
+    if(playerPos.y > (curPanel.camera.target.y - curPanel.camera.offset.y + SCREEN_HEIGHT/2)){
         retVal = eLOWER;
     }
-    else if (playerPos.y < (curPanel.camera.offset.y - SCREEN_HEIGHT / 2))
+    else if (playerPos.y < (curPanel.camera.target.y - curPanel.camera.offset.y-SCREEN_HEIGHT/2))
     {
         retVal = eUPPER;
     }

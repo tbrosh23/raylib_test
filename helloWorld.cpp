@@ -21,6 +21,9 @@ int main(void)
     //const int screenWidth = 800;
     //const int screenHeight = 450;
 
+    int mouseX = 0;
+    int mouseY = 0;
+
     int currentFrame = 0;
 
     int framesCounter = 0;
@@ -65,7 +68,7 @@ int main(void)
     Rectangle buildings[MAX_BUILDINGS] = { 0 };
     Color buildColors[MAX_BUILDINGS] = { 0 };
 
-    Vector2 acceleration = {0, 0.3};
+    Vector2 acceleration = {0, 0.32};
     PosVel playerPosVelLastFrame;
     int collisionStatus;
     PosVel playerPosVel;
@@ -87,6 +90,9 @@ int main(void)
 
     int spacePressedDuration = 0;
     char* spaceString = (char*)malloc(100*sizeof(char));
+    char* mouseString = (char*)malloc(100*sizeof(char));
+    char* playerString = (char*)malloc(100*sizeof(char));
+
 
     int spacing = 0;
 
@@ -104,6 +110,7 @@ int main(void)
                            static_cast<unsigned char>(GetRandomValue(200, 250)), 255 };
     }
 
+    // Panel 1 features -------------------------
     Rectangle floorCollisionBox = {-6000, 320, 13000, 8000};
     collisionBoxes->push_back(floorCollisionBox);
     Rectangle wallLeftCollisionBox = {-400, -1000, 100, 1800};
@@ -115,30 +122,59 @@ int main(void)
     collisionBoxes->push_back(ledge1CollisionBox);
     Rectangle ledge2CollisionBox = {200, 0, (float)mossyTile.width, (float)mossyTile.height};
     collisionBoxes->push_back(ledge2CollisionBox);
-    Rectangle ledge3CollisionBox = {-300, -800, (float)mossyTile.width, (float)mossyTile.height};
+    Rectangle ledge3CollisionBox = {700, -450, (float)mossyTile.width, (float)mossyTile.height};
     collisionBoxes->push_back(ledge3CollisionBox);
+    
 
     
     
     Camera2D camera = { 0 };
     camera.target = { static_cast<float>(player.x + 20.0f), static_cast<float>(player.y + 20.0f - 200.0f )};
+    //camera.target = { 0,0};
     camera.offset = { static_cast<float>(SCREEN_WIDTH/2.0f), static_cast<float>(SCREEN_HEIGHT/2.0f)};
+    //camera.offset = { 0,0};
+
     camera.rotation = 0.0f;
     camera.zoom = 0.55f;
 
     std::vector<Panel>* worldPanels = new std::vector<Panel>;
+
     Panel Panel1;
     Panel1.collisionBoxes = collisionBoxes;
     Panel1.camera         = camera;
 
     worldPanels->push_back(Panel1);
 
+    // Panel 2 features ------------------------------
+    collisionBoxes = new std::vector<Rectangle>;
+    collisionBoxes->push_back(wallLeftCollisionBox);
+    collisionBoxes->push_back(wallRightCollisionBox);
+    collisionBoxes->push_back(ledge3CollisionBox);
+    Rectangle ledge4CollisionBox = {-300, -800, (float)mossyTile.width, (float)mossyTile.height};
+    collisionBoxes->push_back(ledge4CollisionBox);
+
+    camera.target = { static_cast<float>(player.x + 20.0f), static_cast<float>(player.y + 20.0f - 200.0f )};
+    //camera.target = { 0,0};
+    camera.offset = { static_cast<float>(SCREEN_WIDTH/2.0f), static_cast<float>(SCREEN_HEIGHT/2.0f + SCREEN_HEIGHT)};
+
+    Panel1.collisionBoxes = collisionBoxes;
+    Panel1.camera         = camera;
+
+    worldPanels->push_back(Panel1);
+
+    printf("worldPanels size: %d\n", worldPanels->size());
+
     // Initialize curPanel to the first panel
     int curPanelIndex = 0;
     Panel curPanel = (*worldPanels)[curPanelIndex];
-    std::vector<Rectangle>* curCollisionBoxes;
+    printf("Here------------------------------------");
+    printf("curPanel camera: %f\n", curPanel.camera.target.x);
+
+    std::vector<Rectangle>* curCollisionBoxes = new std::vector<Rectangle>;
     // Load the initial collision boxes
     curCollisionBoxes->swap(*(*worldPanels)[curPanelIndex].collisionBoxes);
+    // Load the initial camera
+    Camera2D curCamera = (*worldPanels)[curPanelIndex].camera;
 
     int cameraBoundsStatus = 0;
 
@@ -159,17 +195,24 @@ int main(void)
             curCollisionBoxes->swap(*(*worldPanels)[curPanelIndex].collisionBoxes);
             if(cameraBoundsStatus == eUPPER) {
                 // Load the next panel if it exists
-                if(worldPanels->size() > (curPanelIndex - 1)) {
+                if(worldPanels->size() > (curPanelIndex + 1)) {
+                    printf("loading new panel");
                     curPanelIndex ++;
                     curPanel = (*worldPanels)[curPanelIndex];
+                    curCamera = curPanel.camera;
+                }
+                else{
+                    printf("Would load another panel, but none exist: size: %d, index: %d \n", worldPanels->size(), curPanelIndex);
                 }
             }
             else if (cameraBoundsStatus == eLOWER)
             {
                 // Load the last panel if it exists
                 if(curPanelIndex > 0) {
-                    curPanelIndex --;
+                    printf("loading new panel");
+                    curPanelIndex--;
                     curPanel = (*worldPanels)[curPanelIndex];
+                    curCamera = curPanel.camera;
                 }          
             }
             // Load the new collision Boxes
@@ -274,24 +317,24 @@ int main(void)
         //camera.target = {static_cast<float>(player.x + 20), static_cast<float>(player.y + 20) };
 
         // Camera rotation controls
-        if (IsKeyDown(KEY_A)) camera.rotation--;
-        else if (IsKeyDown(KEY_S)) camera.rotation++;
+        if (IsKeyDown(KEY_A)) curCamera.rotation--;
+        else if (IsKeyDown(KEY_S)) curCamera.rotation++;
 
         // Limit camera rotation to 80 degrees (-40 to 40)
-        if (camera.rotation > 40) camera.rotation = 40;
-        else if (camera.rotation < -40) camera.rotation = -40;
+        if (curCamera.rotation > 40) curCamera.rotation = 40;
+        else if (curCamera.rotation < -40) curCamera.rotation = -40;
 
         // Camera zoom controls
-        camera.zoom += ((float)GetMouseWheelMove()*0.05f);
+        curCamera.zoom += ((float)GetMouseWheelMove()*0.05f);
 
-        if (camera.zoom > 3.0f) camera.zoom = 3.0f;
-        else if (camera.zoom < 0.1f) camera.zoom = 0.1f;
+        if (curCamera.zoom > 3.0f) curCamera.zoom = 3.0f;
+        else if (curCamera.zoom < 0.1f) curCamera.zoom = 0.1f;
 
         // Camera reset (zoom and rotation)
         if (IsKeyPressed(KEY_R))
         {
-            camera.zoom = 1.0f;
-            camera.rotation = 0.0f;
+            curCamera.zoom = 1.0f;
+            curCamera.rotation = 0.0f;
         }
         //----------------------------------------------------------------------------------
 
@@ -354,13 +397,16 @@ int main(void)
 
         playerPosVelLastFrame = playerPosVel;
 
+        mouseX = GetMouseX();
+        mouseY = GetMouseY();
+
         // Draw
         //----------------------------------------------------------------------------------
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
 
-            BeginMode2D(camera);
+            BeginMode2D(curCamera);
 
                 //DrawRectangleRec(floorCollisionBox, DARKGRAY);
                 
@@ -381,7 +427,8 @@ int main(void)
                 DrawTextureRec(mossyTile, mossyTileFrameRec,{ledge1CollisionBox.x, ledge1CollisionBox.y}, WHITE );
                 DrawTextureRec(mossyTile, mossyTileFrameRec,{ledge2CollisionBox.x, ledge2CollisionBox.y}, WHITE );
                 DrawTextureRec(mossyTile, mossyTileFrameRec,{ledge3CollisionBox.x, ledge3CollisionBox.y}, WHITE );
-                
+                DrawTextureRec(mossyTile, mossyTileFrameRec,{ledge4CollisionBox.x, ledge4CollisionBox.y}, WHITE );
+
 
 
             EndMode2D();
@@ -393,17 +440,21 @@ int main(void)
             DrawRectangle(SCREEN_WIDTH - 5, 5, 5, SCREEN_HEIGHT - 10, RED);
             DrawRectangle(0, SCREEN_HEIGHT - 5, SCREEN_WIDTH, 5, RED);
 
-            DrawRectangle( 10, 10, 250, 113, Fade(SKYBLUE, 0.5f));
-            DrawRectangleLines( 10, 10, 250, 113, BLUE);
+            DrawRectangle( 10, 10, 250, 143, Fade(SKYBLUE, 0.5f));
+            DrawRectangleLines( 10, 10, 250, 143, BLUE);
 
             DrawText("Free 2d camera controls:", 20, 20, 10, BLACK);
             DrawText("- Right/Left to move Offset", 40, 40, 10, DARKGRAY);
             DrawText("- Mouse Wheel to Zoom in-out", 40, 60, 10, DARKGRAY);
-            DrawText("- A / S to Rotate", 40, 80, 10, DARKGRAY);
             DrawText("- R to reset Zoom and Rotation", 40, 100, 10, DARKGRAY);
 
             sprintf(spaceString, "- Space is held down for: %d", spacePressedDuration);
             DrawText(spaceString, 40, 120, 10, DARKGRAY);
+            sprintf(mouseString, "- Mouse Position: %d, %d", mouseX, mouseY);
+            DrawText(mouseString, 40, 140, 10, DARKGRAY);
+            sprintf(playerString, "- Player Position: %f, %f", playerPosVel.Pos.x* camera.zoom, playerPosVel.Pos.y * camera.zoom);
+            DrawText(playerString, 40, 80, 10, DARKGRAY);
+
 
         EndDrawing();
         //----------------------------------------------------------------------------------
